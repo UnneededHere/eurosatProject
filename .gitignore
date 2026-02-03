@@ -1,1 +1,13 @@
+__pycache__/
+*.pyc
+
+# Results and checkpoints
+results/
+*.pth
+*.ckpt
+*.csv
+
+# Virtual environment
+mlpEnv/
 /data/eurosat
+/__pycache__/
