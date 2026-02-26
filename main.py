@@ -7,7 +7,7 @@ import os
 import time
 
 # Import your modules
-from datasetFactory import getDataloaders
+from datasetFactory import getDataLoaders
 from models import getModel
 from trainer import trainOneEpoch, evaluate
 
@@ -24,7 +24,7 @@ def main():
     print(f"Starting experiment: {args.model} on {args.split} using {args.device}")
 
     # 1. Setup Data
-    trainLoader, valLoader, _ = getDataloaders(splitKey=args.split, batchSize=args.batchSize)
+    trainLoader, valLoader, _ = getDataLoaders(splitKey=args.split, batchSize=args.batchSize)
 
     # 2. Setup Model
     model = getModel(args.model).to(args.device)
