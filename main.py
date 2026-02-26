@@ -17,17 +17,19 @@ def main():
     parser.add_argument('--batchSize', type=int, default=32, help='Batch size')
     parser.add_argument('--lr', type=float, default=0.001, help='Learning rate')
     parser.add_argument('--model', type=str, default='resnet50', choices=['resnet50', 'vit_b_16'])
-    parser.add_argument('--split', type=str, default='train100', help='Dataset split key (e.g. train10)')
+    parser.add_argument('--split', type=str, default='train100', help='Dataset split key (e.g. train10)', choices=['train10', 'train25', 'train50', 'train100'])
+    parser.add_argument('--dataAug', type=str, default='basic', choices=['none', 'basic', 'MixUp', 'RandAug'])
     parser.add_argument('--device', type=str, default='cuda' if torch.cuda.is_available() else 'cpu')
     args = parser.parse_args()
 
     print(f"Starting experiment: {args.model} on {args.split} using {args.device}")
 
     # 1. Setup Data
-    trainLoader, valLoader, _ = getDataLoaders(splitKey=args.split, batchSize=args.batchSize)
+    trainLoader, valLoader, _ = getDataLoaders(splitKey=args.split, augMethod=args.dataAug, batchSize=args.batchSize)
 
     # 2. Setup Model
     model = getModel(args.model).to(args.device)
+    model.compile()
 
     # 3. Setup Optimizer & Loss
     # ViTs often prefer AdamW, but SGD is fine for a baseline

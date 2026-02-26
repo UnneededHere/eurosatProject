@@ -1,18 +1,21 @@
 import torch
 import json
 import os
+from typing import Iterable, TypedDict
 from itertools import starmap
 from torchvision.datasets import EuroSAT
 from torchvision import transforms
 from torch.utils.data import DataLoader, Subset, default_collate
 
-def getDataLoaders(dataRoot='./data', splitKey='train100', augMethod = 'basic', batchSize=32):
+def getDataLoaders(dataRoot='./data', splitKey: str|Iterable[str]='train100', augMethod: str|dict[str, dict]|Iterable[str]='basic', batchSize=32):
     """
     Args:
-        splitKey: Which training set to use? 
+        splitKey: Which training set to use?
                    Options: 'train100', 'train50', 'train25', 'train10'
         augMethod: which augmentation method to use? Note, 'none' is always applied to eval and test data
-                   Options: 'none', 'basic', 'Mixup', 'AugReg'
+                   Options: 'none', 'basic', 'Mixup', 'RandAug'
+
+    The above can also be vectors of their inputs, and training_loader output will change shape accordingly.
     """
 
     if isinstance(augMethod, str):
