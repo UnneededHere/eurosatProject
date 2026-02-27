@@ -1,6 +1,7 @@
 import torch
 import numpy as np
 
+@torch.compile()
 def trainOneEpoch(model, loader, criterion, optimizer, device):
     model.train()
     runningLoss = 0.0

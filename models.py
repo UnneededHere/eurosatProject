@@ -35,6 +35,8 @@ def getModel(modelName, numClasses=10, pretrained=True):
     else:
         raise ValueError(f"Model {modelName} not supported. Choose 'resnet50' or 'vit_b_16'.")
 
+    model.compile()
+
     return model
 
 if __name__ == "__main__":
