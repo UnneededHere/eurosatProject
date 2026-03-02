@@ -5,6 +5,7 @@ import argparse
 import csv
 import os
 import time
+from concurrent.futures import ProcessPoolExecutor
 
 # Import your modules
 from datasetFactory import getDataLoaders
@@ -18,15 +19,41 @@ def main():
     parser.add_argument('--lr', type=float, default=0.001, help='Learning rate')
     parser.add_argument('--model', type=str, default='resnet50', choices=['resnet50', 'vit_b_16'])
     parser.add_argument('--split', type=str, default='train100', help='Dataset split key (e.g. train10)', choices=['train10', 'train25', 'train50', 'train100'])
-    parser.add_argument('--dataAug', type=str, default='basic', choices=['none', 'basic', 'MixUp', 'RandAug'])
     parser.add_argument('--device', type=str, default='cuda' if torch.cuda.is_available() else 'cpu')
+
+    augMethods = parser.add_subparsers(dest='augMethodUsed')
+    aug_basic = augMethods.add_parser('basic')
+    aug_none = augMethods.add_parser('none')
+    aug_mixup = augMethods.add_parser('MixUp')
+    aug_mixup.add_argument('--alpha', type=float, default=[1.0], nargs='+')
+    aug_randaug = augMethods.add_parser('RandAug')
+    aug_randaug.add_argument('--num-ops', type=int, default=[2], nargs='+')
+    aug_randaug.add_argument('--magnitude', type=int, default=[9], nargs='+')
+    aug_randaug.add_argument('--num-magnitude-bins', type=int, default=31)
     args = parser.parse_args()
 
-    print(f"Starting experiment: {args.model} on {args.split} using {args.device}")
+    print(args)
+    augMethod = args.augMethodUsed or 'basic'
+    if augMethod == 'RandAug':
+        augMethodDetails = [('RandAug', {'num_ops': num_ops, 'magnitude': magnitude, 'num_magnitude_bins': args.num_magnitude_bins})
+                            for num_ops in args.num_ops
+                            for magnitude in args.magnitude
+                            ]
+    elif augMethod == 'MixUp':
+        augMethodDetails = [('MixUp', {'alpha': alpha}) for alpha in args.alpha]
+    else:
+        augMethodDetails = [augMethod]
+
+        
+    print(f"Starting experiment: {args.model} on {args.split} augmented with method {augMethod} using {args.device}")
 
     # 1. Setup Data
-    trainLoader, valLoader, _ = getDataLoaders(splitKey=args.split, augMethod=args.dataAug, batchSize=args.batchSize)
+    trainLoaders, valLoader, _ = getDataLoaders(splitKey=args.split, augMethod=augMethodDetails, batchSize=args.batchSize)
+    with ProcessPoolExecutor() as pool:
+        for trainLoader in trainLoaders:
+            pool.submit(hitIt, trainLoader, valLoader, args)
 
+def hitIt(trainLoader, valLoader, args):
     # 2. Setup Model
     model = getModel(args.model).to(args.device)
     model.compile()
@@ -42,7 +69,7 @@ def main():
     # 4. Results directory and logger setup
     time_str = time.strftime('%Y%m%d-%H%M%S')
     lr_str = str(args.lr).replace('.', 'p')
-    results_dir = os.path.join('results', f"{time_str}_{args.model}_{args.split}_bs{args.batchSize}_lr{lr_str}_{args.device}")
+    results_dir = os.path.join('results', f"{time_str}")
     os.makedirs(results_dir, exist_ok=True)
 
     # Save run parameters
@@ -50,7 +77,7 @@ def main():
         for k, v in vars(args).items():
             pf.write(f"{k}: {v}\n")
 
-    logFile = os.path.join(results_dir, f"results_{args.model}_{args.split}.csv")
+    logFile = os.path.join(results_dir, f"results.csv")
     with open(logFile, 'w', newline='') as f:
         writer = csv.writer(f)
         writer.writerow(['Epoch', 'TrainLoss', 'TrainAcc', 'ValLoss', 'ValAcc', 'Time'])

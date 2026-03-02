@@ -1,13 +1,17 @@
 import torch
 import json
 import os
-from typing import Iterable, TypedDict
+from typing import Iterable, Any, Tuple
 from itertools import starmap
 from torchvision.datasets import EuroSAT
 from torchvision import transforms
 from torch.utils.data import DataLoader, Subset, default_collate
 
-def getDataLoaders(dataRoot='./data', splitKey: str|Iterable[str]='train100', augMethod: str|dict[str, dict]|Iterable[str]='basic', batchSize=32):
+def getDataLoaders(dataRoot='./data',
+                   splitKey: str|Iterable[str]='train100',
+                   augMethod: str|Iterable[str]|Iterable[Tuple[str, dict[str, Any]]]='basic',
+                   batchSize=32
+                   ):
     """
     Args:
         splitKey: Which training set to use?
@@ -19,11 +23,11 @@ def getDataLoaders(dataRoot='./data', splitKey: str|Iterable[str]='train100', au
     """
 
     if isinstance(augMethod, str):
-        augMethods = {augMethod: {}}
-    elif isinstance(augMethod, dict):
-        augMethods = augMethod
+        augMethods = [(augMethod, {})]
+    elif isinstance(augMethod[0], str):
+        augMethods = [(method, {}) for method in augMethod]
     else:
-        augMethods = {method: {} for method in augMethod}
+        augMethods = augMethod
         
     if isinstance(splitKey, str):
         splitKeys = [splitKey]
@@ -39,15 +43,17 @@ def getDataLoaders(dataRoot='./data', splitKey: str|Iterable[str]='train100', au
         collation = default_collate
         
         if method   == 'none':
+            assert methodArgs == {}
             transform = transforms.Compose([])
         elif method == 'basic':
+            assert methodArgs == {}
             transform = transforms.Compose([
                 transforms.RandomHorizontalFlip(), # Basic Augmentation
                 transforms.RandomVerticalFlip()    # Good for satellite imagery
             ])
         elif method == 'MixUp':
-            transform = transforms.Compose([])
-            collation = lambda batch: transforms.v2.MixUp(**methodArgs)(*default_collate(batch))
+            transform, collation = transformMethod(methodArds.get('otherAug', default_value='basic'), {})
+            collation = lambda batch: transforms.v2.MixUp(num_classes=10, **methodArgs)(*collation(batch))
         elif method == 'RandAug':
             transform = transforms.RandAugment(**methodArgs)
         else:
@@ -60,7 +66,7 @@ def getDataLoaders(dataRoot='./data', splitKey: str|Iterable[str]='train100', au
         ]), collation
                                    
 
-    trainTransforms = list(starmap(transformMethod, augMethods.items()))
+    trainTransforms = list(starmap(transformMethod, augMethods))
 
     # Validation/Test data should NOT be augmented (only resized and normalized)
     evalTransform = transformMethod('none', {})
