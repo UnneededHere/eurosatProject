@@ -55,7 +55,15 @@ def getDataLoaders(dataRoot='./data',
             transform, collation = transformMethod(methodArds.get('otherAug', default_value='basic'), {})
             collation = lambda batch: transforms.v2.MixUp(num_classes=10, **methodArgs)(*collation(batch))
         elif method == 'RandAug':
-            transform = transforms.RandAugment(**methodArgs)
+            transform = transforms.RandAugment(fill=128, **methodArgs)
+        elif method == 'MixUpRandAug':
+            randArgs = methodArgs.copy()
+            del randArgs['alpha']
+            mixArgs = {}
+            if 'alpha' in methodArgs:
+                mixArgs['alpha'] = methodArgs['alpha']
+            transform = transforms.RandAugment(fill=128, **randArgs)
+            collation = lambda batch: transforms.v2.MixUp(num_classes=10, **mixArgs)(*collation(batch))
         else:
             raise ValueError("Unrecognised augmentation strategy: " + method)
         return transforms.Compose([
