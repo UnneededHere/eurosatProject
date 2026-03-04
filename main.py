@@ -7,8 +7,7 @@ import os
 import time
 import itertools
 
-# Import your modules (Ensure these match your actual filenames)
-from datasetFactory import getDataloaders
+from datasetFactory import getDataLoaders
 from models import getModel
 from trainer import trainOneEpoch, evaluate
 
@@ -76,7 +75,7 @@ def main():
                 hitIt(model_name, split_name, augName, augDeets, args, file_prefix)
 
 def hitIt(model_name, split_name, augName, augDeets, args, file_prefix):
-    trainLoader, valLoader, _ = getDataloaders(splitKey=split_name, batchSize=args.batchSize)
+    trainLoader, valLoader, _ = getDataLoaders(splitKey=split_name, batchSize=args.batchSize)
 
     model = getModel(model_name).to(args.device)
 
