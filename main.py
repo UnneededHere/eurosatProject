@@ -19,6 +19,7 @@ def main():
     parser.add_argument('--model', type=str, nargs='+', default=['resnet50'], choices=['resnet50', 'vit_b_16'])
     parser.add_argument('--split', type=str, nargs='+', default=['train100'], help='Dataset split key', choices=['train10', 'train25', 'train50', 'train100'])
     parser.add_argument('--device', type=str, default='cuda' if torch.cuda.is_available() else 'cpu')
+    parser.add_argument('--scratch', action='store_true', help='Train from scratch (no pretrained weights)')
     parser.set_defaults(hyper=[])
 
     augMethods = parser.add_subparsers(dest='augCommand')
@@ -77,12 +78,15 @@ def main():
 def hitIt(model_name, split_name, augName, augDeets, args, file_prefix):
     trainLoader, valLoader, _ = getDataLoaders(splitKey=split_name, batchSize=args.batchSize)
 
-    model = getModel(model_name).to(args.device)
+    # Pass the inverted scratch flag to the pretrained parameter
+    model = getModel(model_name, pretrained=not args.scratch).to(args.device)
 
     # Setup Optimizer & Loss
     criterion = nn.CrossEntropyLoss()
     optimizer = optim.SGD(model.parameters(), lr=args.lr, momentum=0.9, weight_decay=5e-4)
-    scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=7, gamma=0.1)
+    # Drop LR at 70% of the total epochs
+    step_sz = int(args.epochs * 0.7) 
+    scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=step_sz, gamma=0.1)
 
     os.makedirs('results', exist_ok=True)
     logFile = os.path.join('results', f"{file_prefix}.csv")
